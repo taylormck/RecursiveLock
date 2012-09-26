@@ -1,0 +1,22 @@
+Time(0): Begin OneSimpleThread
+Time(42): Thread Red attempting acquire of lock Apple
+Time(42): Thread Red acquired lock Apple with rc=1.
+Time(46): Thread Red attempting acquire of lock Apple
+Time(46): Thread Red acquired lock Apple with rc=2.
+Time(51): Thread Red releasing lock Apple
+Time(57): Thread Red releasing lock Apple
+Time(67): Thread Red attempting acquire_try of lock Apple
+Time(67): Thread Red acquire_try lock Apple with rc=1.
+Time(77): Thread Red attempting acquire_try of lock Apple
+Time(77): Thread Red acquire_try lock Apple with rc=2.
+Time(87): Thread Red attempting acquire of lock Apple
+Time(87): Thread Red acquired lock Apple with rc=3.
+Time(92): Thread Red releasing lock Apple
+Time(97): Thread Red releasing lock Apple
+Time(102): Thread Red releasing lock Apple
+Time(112): Thread Red attempting acquire_try of lock Apple
+Time(112): Thread Red acquire_try lock Apple with rc=1.
+Time(117): Thread Red releasing lock Apple
+Time(117): Thread main **** Final Stats****** lock Apple: 3 successful trys, 0 failed trys, and 18.333333333333332 average hold time.
+Time(117): Finished OneSimpleThread!
+

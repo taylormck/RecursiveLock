@@ -1,0 +1,18 @@
+Time(0): Begin TwoSimpleThreads
+Time(42): Thread Pink attempting acquire of lock Pear
+Time(42): Thread Pink acquired lock Pear with rc=1.
+Time(43): Thread Green attempting acquire_try of lock Pear
+Time(43): Thread Green acquire_try lock Pear with rc=0.
+Time(44): Thread Green attempting acquire of lock Pear
+Time(46): Thread Pink attempting acquire of lock Pear
+Time(46): Thread Pink acquired lock Pear with rc=2.
+Time(51): Thread Pink releasing lock Pear
+Time(57): Thread Pink releasing lock Pear
+Time(57): Thread Green acquired lock Pear with rc=1.
+Time(57): Thread Green attempting acquire_try of lock Pear
+Time(57): Thread Green acquire_try lock Pear with rc=2.
+Time(67): Thread Green releasing lock Pear
+Time(67): Thread Green releasing lock Pear
+Time(67): Thread main **** Final Stats****** lock Pear: 1 successful trys, 1 failed trys, and 12.5 average hold time.
+Time(67): Finished TwoSimpleThreads!
+

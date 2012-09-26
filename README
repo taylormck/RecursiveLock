@@ -1,0 +1,33 @@
+Project 2. CS439 (Rockhold)
+
+Name: __________________ EID: __________  
+Slip days I used (this project): _______ Slip days used (total): ______
+
+Public multiprocessor CS Linux machine your solution 
+successfully runs on is:  _________.cs.utexas.edu
+
+Project Questions–
+Look at class FIFOLock, method acquire(), for Block 1:
+
+Question 1a.Why wasn't the code structured:
+
+
+synchronized(this) {
+        synchronized(w) {
+        
+            ....
+        
+            w.wait();
+        
+            ....
+        
+        }
+}
+
+
+
+Answer:
+
+
+
+

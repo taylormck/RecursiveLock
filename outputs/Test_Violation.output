@@ -1,0 +1,11 @@
+Time(0): Begin Violation
+Time(42): Thread Mauve attempting acquire of lock Avacado
+Time(42): Thread Mauve acquired lock Avacado with rc=1.
+Time(43): Thread Black attempting acquire_try of lock Avacado
+Time(43): Thread Black acquire_try lock Avacado with rc=0.
+Time(44): Thread Black releasing lock Avacado
+Time(44): Protocol violation: Thread Black attempted to relase lock Avacado which is owned by Mauve
+Time(642): Thread Mauve releasing lock Avacado
+Time(642): Thread main **** Final Stats****** lock Avacado: 0 successful trys, 1 failed trys, and 600.0 average hold time.
+Time(642): Finished Violation!
+

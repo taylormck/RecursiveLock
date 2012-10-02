@@ -1,4 +1,4 @@
-JUNIT_PATH=/usr/share/java/junit.jar
+JUNIT_PATH=/usr/share/java/junit4.jar
 BIN_PATH=./bin
 ALL_PATH=./:$(JUNIT_PATH):$(BIN_PATH)
 

@@ -9,7 +9,9 @@ package student;
  * @version 1.0
  */
 
+import java.util.LinkedList;
 import java.util.Queue;
+import java.util.concurrent.Semaphore;
 
 import cs439.lab2.lock.FIFOLock;
 import cs439.lab2.lock.IStatsLock;
@@ -26,6 +28,9 @@ public class RecursiveLock implements IStatsLock {
 	private int tryFailCount;
 	private long lockHeldTime;
 	private int useCount;
+	private Semaphore sv;
+	private Semaphore must_wait;
+	private Thread lockOwnerThread;
 	private boolean locked;
 
 	// Not sure if this is needed
@@ -36,7 +41,6 @@ public class RecursiveLock implements IStatsLock {
 		}
 	}
 
-
 	public RecursiveLock(String _name) {
 		name = _name;
 		synchronized (this){
@@ -44,47 +48,57 @@ public class RecursiveLock implements IStatsLock {
 		}
 		depth = 0;
 		fl = new FIFOLock(name + "-fl");
+		waiters = new LinkedList<Waiter>();
+		sv = new Semaphore(1);
+		must_wait = new Semaphore(1);
+		depth = 0;
+		locked = false;
 	}
-	
-	/* (non-Javadoc)
-	 * ADVISORY ONLY.
-	 * DOES NOT NEED TO BE THREAD SAFE
-	 * DO NOT SYNCHRONIZE 
-	 */
+
 	public static int getInstanceCount() {
 		return instanceCount;
 	}
 
-	/* (non-Javadoc)
-	 * @see ILock#acquire()
-	 */
-	
 	// To be modified
- 	public int acquire() {
+	public int acquire() {
 		Waiter w = new Waiter();
-		boolean must_wait;
-// Block 1 for questions 1a, 1b		
-		synchronized (w) {
-			synchronized (this) {
-				if (locked) {
-					must_wait = true;
-					waiters.add(w);
-				} else {
-					must_wait = false;
-					locked = true;
-				}
-			}
-			if (must_wait) {
-				// Let the simulator know we're going to block this Thread
-				ScheduledThread.setWillBlock(Thread.currentThread());
-				try {
-					w.wait();
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-			}
+		try {
+			sv.acquire();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
 		}
-// End Block 1	
+		
+		if (lockOwnerThread == null) {
+			fl.acquire();
+			lockOwnerThread = Thread.currentThread();
+			depth++;
+		}
+		else if (lockOwnerThread == Thread.currentThread()) {
+			depth++;
+		}
+		else {
+			sv.release();
+			try {
+				must_wait.acquire();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			try {
+				waiters.add(w);
+				sv.acquire();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			must_wait.release();
+			
+			// We own the lock now
+			fl.acquire();
+			lockOwnerThread = Thread.currentThread();
+			depth++;
+		}
+		
+		sv.release();
+
 		return 1;
 	}
 
@@ -92,28 +106,32 @@ public class RecursiveLock implements IStatsLock {
 	 * @see ILock#acquire_try()
 	 */
 	public int release() {
+		try {
+			sv.acquire();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		if (lockOwnerThread == Thread.currentThread()) {
+			depth--;
+			if (depth == 0)
+				fl.release();
+		}
+		// No op otherwise
+		
+		sv.release();
 
-		return 0; // TBD
+		return 1; // TBD
 	}
 
 	/* (non-Javadoc)
 	 * @see ILock#acquire_try()
 	 */
 	public int acquire_try() {
-		
+
 		return 0; // TBD
 	}
 
-	/* (non-Javadoc)
-	 * @see ILock#getName()
-	 */
 	public String getName() { return name; }
-
-	/* (non-Javadoc)
-	 * ADVISORY ONLY.
-	 * DOES NOT NEED TO BE THREAD SAFE
-	 * DO NOT SYNCHRONIZE 
-	 */
 	public int getWaitersCount() { return waiters.size(); }
 	public int getTrySuccessCount() { return trySuccessCount; }
 	public int getTryFailCount() { return tryFailCount; }

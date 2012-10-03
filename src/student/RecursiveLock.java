@@ -19,49 +19,43 @@ import cs439.lab2.lock.LockProtocolViolation;
 import cs439.lab2.lock.ScheduledThread;
 
 public class RecursiveLock implements IStatsLock {
+	//-------------------------------------------
+	// These are used to directly implement the 
+	// synchronization
+	//-------------------------------------------
 	private String name;
-	private static int instanceCount = 0;
-	private int depth;
-	private FIFOLock fl;
-	private Queue<Waiter> waiters;
-	private int trySuccessCount;
-	private int tryFailCount;
-	private long lockHeldTime;
-	private int useCount;
 	private Semaphore sv;
-	private Semaphore must_wait;
-	private Thread lockOwnerThread;
-	private boolean locked;
-
-	// Not sure if this is needed
-	private static class Waiter {
-		Thread t;
-		Waiter() {
-			t = Thread.currentThread();
-		}
-	}
+	private FIFOLock fl;
+	private Thread lockOwnerThread = null;
+	private int depth = 0;
+	
+	//-------------------------------------------
+	// These are used for statistics
+	//-------------------------------------------
+	private static int instanceCount = 0;
+	private int trySuccessCount = 0;
+	private int tryFailCount = 0;
+	private long lockHeldTime = 0;
+	private int useCount = 0;
+	private int waitersCount = 0;
+	private long startTimer = 0;
 
 	public RecursiveLock(String _name) {
 		name = _name;
+		fl = new FIFOLock(name + "-fl");
+		sv = new Semaphore(1);
+		
 		synchronized (this){
 			instanceCount++;
 		}
-		depth = 0;
-		fl = new FIFOLock(name + "-fl");
-		waiters = new LinkedList<Waiter>();
-		sv = new Semaphore(1);
-		must_wait = new Semaphore(1);
-		depth = 0;
-		locked = false;
 	}
 
 	public static int getInstanceCount() {
 		return instanceCount;
 	}
 
-	// To be modified
+	
 	public int acquire() {
-		Waiter w = new Waiter();
 		try {
 			sv.acquire();
 		} catch (InterruptedException e) {
@@ -69,37 +63,32 @@ public class RecursiveLock implements IStatsLock {
 		}
 		
 		if (lockOwnerThread == null) {
-			fl.acquire();
 			lockOwnerThread = Thread.currentThread();
+			fl.acquire();
+			startTimer = ScheduledThread.getTime();
 			depth++;
 		}
 		else if (lockOwnerThread == Thread.currentThread()) {
 			depth++;
 		}
 		else {
+			waitersCount++;
 			sv.release();
+			fl.acquire();
 			try {
-				must_wait.acquire();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-			try {
-				waiters.add(w);
 				sv.acquire();
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
-			must_wait.release();
-			
-			// We own the lock now
-			fl.acquire();
+			waitersCount--;
 			lockOwnerThread = Thread.currentThread();
+			startTimer = ScheduledThread.getTime();
 			depth++;
 		}
 		
 		sv.release();
 
-		return 1;
+		return depth;
 	}
 
 	/* (non-Javadoc)
@@ -113,29 +102,63 @@ public class RecursiveLock implements IStatsLock {
 		}
 		if (lockOwnerThread == Thread.currentThread()) {
 			depth--;
-			if (depth == 0)
+			if (depth == 0) {
 				fl.release();
+				lockOwnerThread = null;
+				
+				lockHeldTime = ScheduledThread.getTime() - startTimer;
+				useCount++;
+			}
 		}
-		// No op otherwise
+		else if (lockOwnerThread != null) {
+			throw new LockProtocolViolation(this, Thread.currentThread(), lockOwnerThread);
+		}
 		
 		sv.release();
 
-		return 1; // TBD
+		return depth;
 	}
 
 	/* (non-Javadoc)
 	 * @see ILock#acquire_try()
 	 */
 	public int acquire_try() {
-
-		return 0; // TBD
+		try {
+			sv.acquire();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		int result = 0;
+		if (lockOwnerThread == null) {
+			fl.acquire();
+			lockOwnerThread = Thread.currentThread();
+			depth++;
+			trySuccessCount++;
+			result = depth;
+		}
+		else if (lockOwnerThread == Thread.currentThread()) {
+			depth++;
+			trySuccessCount++;
+			result = depth;
+		}
+		else {
+			tryFailCount++;
+		}
+		sv.release();
+		return result;
 	}
 
+	public long getTotalLockHeldTime() { 
+		if (lockOwnerThread == null)
+			return lockHeldTime;
+		else {
+			return lockHeldTime + (ScheduledThread.getTime() - startTimer);
+		}
+	}
 	public String getName() { return name; }
-	public int getWaitersCount() { return waiters.size(); }
+	public int getWaitersCount() { return waitersCount; }
 	public int getTrySuccessCount() { return trySuccessCount; }
 	public int getTryFailCount() { return tryFailCount; }
-	public long getTotalLockHeldTime() { return lockHeldTime; }
 	public int getUseCount() { return useCount; }
 
 }

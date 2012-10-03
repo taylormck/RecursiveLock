@@ -45,14 +45,24 @@ public class RecursiveLock implements IStatsLock {
 		}
 	}
 
+	/*
+	 * (non-Javadoc)
+	 * @see cs439.lab2.lock.ILock#acquire()
+	 */
 	public int acquire() {
-		synch.acquire();
+		synch.acquire();  // Enter
+		
+		// If this thread already owns the lock
 		if (lockOwnerThread == Thread.currentThread()) {
 			depth++;
 		}
+		
+		// Otherwise, this thread doesn't own the lock
+		// Functions the same when no threads own the lock as when
+		// another thread owns the lock
 		else {
 			waitersCount++;
-			synch.release();
+			synch.release();  // Release control to before waiting
 			lock.acquire();
 
 			// Now we have the lock
@@ -63,36 +73,51 @@ public class RecursiveLock implements IStatsLock {
 			depth++;
 		} 
 
-		synch.release();
+		synch.release();  // Exit
 		return depth;
 	}
 
+	/*
+	 * (non-Javadoc)
+	 * @see cs439.lab2.lock.ILock#release()
+	 */
 	public int release() {
-		synch.acquire();
-
+		synch.acquire(); // Enter
+		
+		// If we own the lock
 		if (lockOwnerThread == Thread.currentThread()) {
 			depth--;
+			
+			// If we enter this block, it's time to release the lock
 			if (depth == 0) {
 				long t = ScheduledThread.getTime();
 				lockHeldTime += t - startTimer;
 				useCount++;
-				
 				lock.release();
 				lockOwnerThread = null;
 			}
 		}
+		
+		// Otherwise, we don't own the lock and we need to throw
+		// an LockProtocolViolation exception
 		else {
 			synch.release();
 			throw new LockProtocolViolation(this, Thread.currentThread(), lockOwnerThread);
 		}
 
-		synch.release();
+		synch.release(); // Exit
 		return depth;
 	}
 
+	/*
+	 * (non-Javadoc)
+	 * @see cs439.lab2.lock.ILock#acquire_try()
+	 */
 	public int acquire_try() {
-		synch.acquire();
+		synch.acquire(); // Enter
 		int result = 0;
+		
+		// Lock is available
 		if (lockOwnerThread == null) {
 			lock.acquire();
 			lockOwnerThread = Thread.currentThread();
@@ -101,15 +126,19 @@ public class RecursiveLock implements IStatsLock {
 			startTimer = ScheduledThread.getTime();
 			result = depth;
 		}
+		
+		// We already own the lock
 		else if (lockOwnerThread == Thread.currentThread()) {
 			depth++;
 			trySuccessCount++;
 			result = depth;
 		}
+		
+		// Lock is already held by another thread
 		else {
 			tryFailCount++;
 		}
-		synch.release();
+		synch.release();  // Exit
 		return result;
 	}
 

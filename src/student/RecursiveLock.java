@@ -1,10 +1,10 @@
 package student;
 /**
- * Title:        
- * Description:
+ * Title:        Recursive Lock
+ * Description:  A simple recursive lock implemented with a FIFOLock class
  * Copyright:    Copyright (c) 2012
  * Company:      University of Texas at Austin
- * @author 
+ * @author 		 Taylor McKinney
  * @version 1.0
  */
 import cs439.lab2.lock.FIFOLock;
@@ -18,8 +18,8 @@ public class RecursiveLock implements IStatsLock {
 	// synchronization
 	//-------------------------------------------
 	private String name;
-	private FIFOLock sv;
-	private FIFOLock fl;
+	private FIFOLock synch;
+	private FIFOLock lock;
 	private Thread lockOwnerThread = null;
 	private int depth = 0;
 
@@ -37,8 +37,8 @@ public class RecursiveLock implements IStatsLock {
 	// The constructor requires synchronized
 	public RecursiveLock(String _name) {
 		name = _name;
-		fl = new FIFOLock(name + "-fl");
-		sv = new FIFOLock(name + "-synch");
+		lock = new FIFOLock(name + "-fl");
+		synch = new FIFOLock(name + "-synch");
 
 		synchronized (this){
 			instanceCount++;
@@ -46,57 +46,59 @@ public class RecursiveLock implements IStatsLock {
 	}
 
 	public int acquire() {
-		sv.acquire();
+		synch.acquire();
 		if (lockOwnerThread == Thread.currentThread()) {
 			depth++;
 		}
 		else {
 			waitersCount++;
-			sv.release();
-			fl.acquire();
+			synch.release();
+			lock.acquire();
 
 			// Now we have the lock
-			sv.acquire();
+			synch.acquire();
 			waitersCount--;
 			lockOwnerThread = Thread.currentThread();
 			startTimer = ScheduledThread.getTime();
 			depth++;
 		} 
 
-		sv.release();
+		synch.release();
 		return depth;
 	}
 
 	public int release() {
-		sv.acquire();
+		synch.acquire();
 
 		if (lockOwnerThread == Thread.currentThread()) {
 			depth--;
 			if (depth == 0) {
-				fl.release();
-				lockOwnerThread = null;
-
-				lockHeldTime += ScheduledThread.getTime() - startTimer;
+				long t = ScheduledThread.getTime();
+				lockHeldTime += t - startTimer;
 				useCount++;
+				
+				lock.release();
+				lockOwnerThread = null;
 			}
 		}
 		else {
-			sv.release();
+			synch.release();
 			throw new LockProtocolViolation(this, Thread.currentThread(), lockOwnerThread);
 		}
 
-		sv.release();
+		synch.release();
 		return depth;
 	}
 
 	public int acquire_try() {
-		sv.acquire();
+		synch.acquire();
 		int result = 0;
 		if (lockOwnerThread == null) {
-			fl.acquire();
+			lock.acquire();
 			lockOwnerThread = Thread.currentThread();
 			depth++;
 			trySuccessCount++;
+			startTimer = ScheduledThread.getTime();
 			result = depth;
 		}
 		else if (lockOwnerThread == Thread.currentThread()) {
@@ -107,12 +109,12 @@ public class RecursiveLock implements IStatsLock {
 		else {
 			tryFailCount++;
 		}
-		sv.release();
+		synch.release();
 		return result;
 	}
 
 	//--------------------------------------------------------
-	// These do not need to be syncrhonized
+	// These do not need to be synchronized
 	//--------------------------------------------------------
 	public long getTotalLockHeldTime() { return lockHeldTime; }
 	public String getName() { return name; }
